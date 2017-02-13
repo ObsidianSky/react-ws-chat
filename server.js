@@ -39,8 +39,16 @@ wss.on('connection', (ws) => {
 
         switch (message.action) {
             case 'NEW_USER':
+
                 //set new user name
                 userName = message.payload ? message.payload.replace(/\W/g, '_') : `User${users.length}`;
+
+                // if user open another tab
+                if(users.indexOf(message.payload) !== -1) {
+                    console.log('this user is online');
+                    break;
+                }
+
                 users.push(userName);
 
                 //notify about changes in users list

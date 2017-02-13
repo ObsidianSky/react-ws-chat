@@ -8,6 +8,7 @@ class App extends Component {
     constructor(props) {
         super(props);
         this.state = {
+            connectionReady: false,
             userName: null,
             users: [],
             messages: []
@@ -16,34 +17,28 @@ class App extends Component {
         this.messageHandler = this.messageHandler.bind(this);
         this.nameSubmit = this.nameSubmit.bind(this);
         this.messageSubmit = this.messageSubmit.bind(this);
+
+        const url = 'ws://10.17.9.63:7475';
+        this.socket = new WebSocket(url);
+
+        this.socket.onmessage = this.messageHandler;
     }
 
     componentWillMount() {
-        const url = 'ws://10.17.9.63:7475';
-
-        this.socket = new Proxy((new WebSocket(url)), {
-            get(target, prop) {
-                if(typeof target[prop] === 'function') {
-                    return target[prop].bind(target);
-                }
-                return target[prop];
-            },
-            set(target, prop, value) {
-                target[prop] = value;
-                return true;
-            }
-        });
-
-        this.socket.onmessage = this.messageHandler;
-
-        console.dir(this.socket.readyState);
-
         const userName = localStorage.getItem('userName');
-        console.log('user name ', userName);
 
-        if(userName !== null) {
-            this.nameSubmit(userName);
-        }
+        const trySubmitName = () => {
+            if(this.socket.readyState === 1){
+                if(userName !== null) {
+                    this.nameSubmit(userName);
+                }
+                this.setState({connectionReady: true});
+            } else {
+                setTimeout(trySubmitName, 100);
+            }
+        };
+
+        trySubmitName();
     }
 
     sendMessage(action) {
@@ -89,7 +84,7 @@ class App extends Component {
     }
 
     render() {
-        const { userName, users, messages } = this.state;
+        const { userName, users, messages, connectionReady } = this.state;
 
         return <div>
             <div className='wrapper'>
@@ -97,13 +92,16 @@ class App extends Component {
                     <div className='col-xs-9'>
                         <MessageBox
                             messages={messages}
+                            currentUser={userName}
                         />
                         <div className='col-xs-10 col-xs-offset-1'>
-                            <MessageForm
-                                type={userName ? 'message' : 'name'}
-                                nameSubmit={this.nameSubmit}
-                                messageSubmit={this.messageSubmit}
-                            />
+                            {connectionReady &&
+                                <MessageForm
+                                    type={userName ? 'message' : 'name'}
+                                    nameSubmit={this.nameSubmit}
+                                    messageSubmit={this.messageSubmit}
+                                />
+                            }
                         </div>
                     </div>
                     <div className='col-xs-3'>
